@@ -77,6 +77,47 @@ def group_addresses(items):
     return out
 
 
+def draw_rich(c, segments, x, y, maxw, size=9.5, leading=14):
+    """Draw a paragraph whose runs mix regular and bold, wrapping across runs.
+
+    segments is [(text, is_bold), ...]. Returns the y below the last line.
+    """
+    words = []                       # (word, bold)
+    for text, bold in segments:
+        parts = text.split(" ")
+        for i, w_ in enumerate(parts):
+            if w_ == "":
+                continue
+            words.append((w_, bold))
+    line, cur = [], 0.0
+    space_r = c.stringWidth(" ", "Helvetica", size)
+    space_b = c.stringWidth(" ", "Helvetica-Bold", size)
+    for w_, bold in words:
+        font = "Helvetica-Bold" if bold else "Helvetica"
+        ww = c.stringWidth(w_, font, size)
+        sp = (space_b if bold else space_r) if line else 0
+        if cur + sp + ww > maxw and line:
+            cx = x
+            for lw, lb, lsp in line:
+                cx += lsp
+                c.setFont("Helvetica-Bold" if lb else "Helvetica", size)
+                c.drawString(cx, y, lw)
+                cx += c.stringWidth(lw, "Helvetica-Bold" if lb else "Helvetica", size)
+            y -= leading
+            line, cur = [(w_, bold, 0)], ww
+        else:
+            line.append((w_, bold, sp)); cur += sp + ww
+    if line:
+        cx = x
+        for lw, lb, lsp in line:
+            cx += lsp
+            c.setFont("Helvetica-Bold" if lb else "Helvetica", size)
+            c.drawString(cx, y, lw)
+            cx += c.stringWidth(lw, "Helvetica-Bold" if lb else "Helvetica", size)
+        y -= leading
+    return y
+
+
 def build(path, project, company):
     c = canvas.Canvas(path, pagesize=LETTER)
     c.setTitle(f"Hydro-Québec addendum - {company}")
@@ -125,6 +166,23 @@ def build(path, project, company):
                              "responsibility to advise Hydro Quebec of their new address and moving "
                              f"date, {UP} is not responsible for the tenant Hydro.")),
         }[lang]
+        # The paragraph is regular weight except for the emphasised clause,
+        # which is bold on the originals.
+        segments = {
+            "FR": [
+                ("Le nouveau locataire ", False),
+                ("a été expliqué et a compris qu'il est de sa responsabilité "
+                 "d'aviser Hydro Québec", True),
+                (f" de leur nouvelle adresse et date d'aménagement, {UP} n'est pas "
+                 "responsable de l'Hydro du locataire.", False),
+            ],
+            "EN": [
+                ("The new tenant was explained and understood that it is his or her ", False),
+                ("responsibility to advise Hydro Quebec", True),
+                (f" of their new address and moving date, {UP} is not responsible "
+                 "for the tenant Hydro.", False),
+            ],
+        }[lang]
         p = lang.lower()
         c.setFont("Helvetica-Bold", 10)
         c.drawString(L, y, t["date"]);  field(f"{p}_date", L + 62, y, 160, h=16); y -= ROW
@@ -134,17 +192,8 @@ def build(path, project, company):
         field(f"{p}_address", L + c.stringWidth(t["addr"], "Helvetica-Bold", 10) + 8, y, 310, h=16); y -= ROW
         c.drawString(L, y, t["who"])
         field(f"{p}_tenant_name", L + c.stringWidth(t["who"], "Helvetica-Bold", 10) + 8, y, 290, h=16); y -= ROW + 6
-        # body paragraph — bold, matching the EFT form
-        c.setFont("Helvetica-Bold", 9.5)
-        words, line = t["body"].split(), ""
-        for w_ in words:
-            trial = (line + " " + w_).strip()
-            if c.stringWidth(trial, "Helvetica-Bold", 9.5) <= (R - L):
-                line = trial
-            else:
-                c.drawString(L, y, line); y -= 14; line = w_
-        if line:
-            c.drawString(L, y, line); y -= 14
+        # body paragraph — regular, with the emphasised clause in bold
+        y = draw_rich(c, segments, L, y, R - L, size=9.5, leading=14)
         y -= 22
         c.setFont("Helvetica-Bold", 10)
         c.drawString(L, y, t["sig"])
