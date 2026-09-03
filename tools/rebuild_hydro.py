@@ -22,6 +22,8 @@ from reportlab.lib.utils import ImageReader
 
 W, H = LETTER
 FIELD_BG = HexColor("#DCE3F5")
+ROW = 32          # gap between labelled rows
+BLOCK_GAP = 74    # gap between the French and English halves
 HERE = os.path.dirname(__file__)
 LOGO = os.path.join(HERE, "..", "logo_0.png")
 HQ_LOGO = os.path.join(HERE, "..", "hydroquebec-logo.png")
@@ -124,37 +126,39 @@ def build(path, project, company):
                              f"date, {UP} is not responsible for the tenant Hydro.")),
         }[lang]
         p = lang.lower()
-        c.setFont("Helvetica-Bold", 9.5)
-        c.drawString(L, y, t["date"]);  field(f"{p}_date", L + 60, y, 150); y -= 22
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(L, y, t["date"]);  field(f"{p}_date", L + 62, y, 160, h=16); y -= ROW
         c.drawString(L, y, t["num"])
-        field(f"{p}_lease_number", L + c.stringWidth(t["num"], "Helvetica-Bold", 9.5) + 8, y, 190); y -= 22
+        field(f"{p}_lease_number", L + c.stringWidth(t["num"], "Helvetica-Bold", 10) + 8, y, 200, h=16); y -= ROW
         c.drawString(L, y, t["addr"])
-        field(f"{p}_address", L + c.stringWidth(t["addr"], "Helvetica-Bold", 9.5) + 8, y, 300); y -= 22
+        field(f"{p}_address", L + c.stringWidth(t["addr"], "Helvetica-Bold", 10) + 8, y, 310, h=16); y -= ROW
         c.drawString(L, y, t["who"])
-        field(f"{p}_tenant_name", L + c.stringWidth(t["who"], "Helvetica-Bold", 9.5) + 8, y, 280); y -= 26
-        # body paragraph
-        c.setFont("Helvetica", 9)
+        field(f"{p}_tenant_name", L + c.stringWidth(t["who"], "Helvetica-Bold", 10) + 8, y, 290, h=16); y -= ROW + 6
+        # body paragraph — bold, matching the EFT form
+        c.setFont("Helvetica-Bold", 9.5)
         words, line = t["body"].split(), ""
         for w_ in words:
             trial = (line + " " + w_).strip()
-            if c.stringWidth(trial, "Helvetica", 9) <= (R - L):
+            if c.stringWidth(trial, "Helvetica-Bold", 9.5) <= (R - L):
                 line = trial
             else:
-                c.drawString(L, y, line); y -= 12; line = w_
+                c.drawString(L, y, line); y -= 14; line = w_
         if line:
-            c.drawString(L, y, line); y -= 12
-        y -= 14
-        c.setFont("Helvetica-Bold", 9.5)
+            c.drawString(L, y, line); y -= 14
+        y -= 22
+        c.setFont("Helvetica-Bold", 10)
         c.drawString(L, y, t["sig"])
-        sx = L + c.stringWidth(t["sig"], "Helvetica-Bold", 9.5) + 8
-        c.line(sx, y - 2, sx + 250, y - 2)
-        y -= 34
+        sx = L + c.stringWidth(t["sig"], "Helvetica-Bold", 10) + 8
+        c.line(sx, y - 2, sx + 260, y - 2)
+        y -= BLOCK_GAP
 
     block("FR")
     block("EN")
 
-    c.setFont("Helvetica-Bold", 9.5)
-    c.drawString(L, y, "The Administration")
+    # Sign-off sits near the foot of the page so the sheet reads as a full
+    # letter rather than trailing off with a blank lower half.
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(L, max(y, 96), "The Administration")
 
     c.showPage()
     c.save()
