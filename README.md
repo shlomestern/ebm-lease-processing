@@ -33,6 +33,7 @@ Everything signs inside CORPIQ. Docusign and Adobe are not used.
 | `forms/hydro/` | 15 Hydro-Québec addenda — only these projects have one |
 | `tools/companies.py` | project number -> company legal name |
 | `tools/rebuild.py` | regenerates every EFT form |
+| `tools/rebuild_hydro.py` | regenerates every Hydro addendum |
 | `tools/gmail-lease-bridge.gs` | the Gmail Apps Script bridge |
 
 ## Forms
@@ -64,19 +65,26 @@ python3 -m venv .venv && .venv/bin/pip install pypdf reportlab pillow
 ### Hydro (15 projects: 13, 14, 17, 22, 24, 28, 30, 31, 32, 33, 34, 38, 40, 42, 50)
 
 A bilingual addendum in which the tenant acknowledges that notifying
-Hydro-Québec is their own responsibility. French and English halves hold the
-same three values, so both must be written:
+Hydro-Québec is their own responsibility. Rebuilt by `tools/rebuild_hydro.py`
+to match the EFT styling, and generated empty.
+
+The supplied masters were reused between tenancies and still held the previous
+tenant's name, lease number and — on projects 34 and 38 — their signature
+dates. Several also rendered the company name as an image in a decorative font
+with typos ("parkvew realties", "simo realities", and "responsivity" for
+"responsibility"). Company names here come from the projects workbook.
+
+The French and English halves carry the same three values, so write each twice:
 
 | French | English | Value |
 |---|---|---|
-| `Text9` | `Text12` | CORPIQ lease number |
-| `Text10` | `Text13` | apartment + building address |
-| `Text11` | `Text14` | tenant name |
+| `fr_lease_number` | `en_lease_number` | CORPIQ lease number |
+| `fr_address` | `en_address` | apartment + building address |
+| `fr_tenant_name` | `en_tenant_name` | tenant name |
+| `fr_date` | `en_date` | date |
 
-The copies here have been stripped of the previous tenants' data. **Clear every
-field before writing** — the originals also carried stale signature dates on
-projects 34 and 38 — and verify no old value survives before attaching, so a
-new tenant never receives a form naming someone else.
+Building addresses in each header come from the workbook, grouped by street.
+Regenerate with `.venv/bin/python tools/rebuild_hydro.py`.
 
 ## Known gaps
 
@@ -84,8 +92,8 @@ new tenant never receives a form naming someone else.
 - The office address on the EFT header came from a newer version of the form
   than the masters used here. If any company uses a different address, change
   `OFFICE_ADDRESS` in `tools/rebuild.py`.
-- Project 26 is **Seigneurie Lasalle Inc.**; the projects workbook spells it
-  "Seigneure".
+- Project 26 is **Seigneurie Lasalle Inc.** (confirmed by Shlome); the projects
+  workbook spells it "Seigneure".
 
 ## The Gmail bridge
 
