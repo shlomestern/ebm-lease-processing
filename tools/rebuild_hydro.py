@@ -28,23 +28,21 @@ HERE = os.path.dirname(__file__)
 LOGO = os.path.join(HERE, "..", "logo_0.png")
 HQ_LOGO = os.path.join(HERE, "..", "hydroquebec-logo.png")
 
-# Projects that have a Hydro addendum, and their buildings (from the workbook).
+# Projects whose tenants sign the Hydro addendum, and the buildings it covers.
+# Excludes projects where hydro is included in the rent (19, 22, 26, 34, 44,
+# 46, 48) and, for 24, the 7775 building.
 BUILDINGS = {
     "13": ["9379 Lasalle", "9399 Lasalle", "9419 Lasalle", "9400 Centrale"],
     "14": ["3225 Langelier", "3245 Langelier", "3265 Langelier", "3285 Langelier",
            "3195 Parkville", "3215 Parkville"],
     "17": ["585 77e Avenue", "595 77e Avenue", "615 77e Avenue", "665 77e Avenue",
            "725 77e Avenue", "755 77e Avenue"],
-    "22": ["10301 Gouin Ouest", "10309 Gouin Ouest"],
-    "24": ["7725 Trahan", "7775 Trahan"],
+    "24": ["7725 Trahan"],   # 7775 has hydro included in the rent
     "28": ["189 Bishop-Power", "229 Bishop-Power"],
     "30": ["400 Lansdowne", "1669 Ringuet"],
     "31": ["5295 Des Erables"],
     "32": ["11666 St-Germain"],
     "33": ["5911 Parc Ave"],
-    "34": ["17000 Pierrefonds", "17100 Pierrefonds", "17017 Emile-Nelligan",
-           "17111 Emile-Nelligan", "17115 Emile-Nelligan", "17125 Emile-Nelligan",
-           "4900 Louis-Frechette", "4905 Louis-Frechette"],
     "38": ["5587-5603 de l'Esplanade"],
     "40": ["11055 Touchette", "11065 Touchette", "11075 Touchette"],
     "42": ["12200 Pierrefonds", "12210 Pierrefonds"],

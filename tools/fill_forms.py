@@ -27,9 +27,19 @@ REPO = os.path.dirname(HERE)
 EFT_DIR = os.path.join(REPO, "forms", "eft")
 HYDRO_DIR = os.path.join(REPO, "forms", "hydro")
 
-# Only these projects have a Hydro addendum.
-HYDRO_PROJECTS = {"13", "14", "17", "22", "24", "28", "30", "31", "32",
-                  "33", "34", "38", "40", "42", "50"}
+# Hydro is INCLUDED in the rent at these projects, so no form and no transfer:
+#   46 (4875), 48 (Luxueux), 44 (7050), 26 (Seigneurie), 19 (Bridgeview),
+#   34 (Le Palais), 22 (Shoreside), and building 7775 of 24 (Terrasse).
+# Everywhere else the tenant signs the addendum, and someone then transfers
+# responsibility on the Hydro-Québec site by hand (not automated).
+HYDRO_PROJECTS = {"13", "14", "17", "24", "28", "30", "31", "32",
+                  "33", "38", "40", "42", "50"}
+
+# Projects where hydro depends on which building the unit is in. Values are
+# the buildings where hydro IS included, so no form is produced for them.
+HYDRO_INCLUDED_BUILDINGS = {
+    "24": ("7775",),   # 7725 Trahan needs the form; 7775 Trahan does not
+}
 
 EFT_TENANT_FIELDS = {
     "tenant_name", "building", "unit", "tel",
@@ -97,9 +107,29 @@ def fill_eft(project, lang, values, out_dir):
     return out
 
 
-def fill_hydro(project, lease_number, address, tenant_name, date, out_dir):
-    """Fill the Hydro addendum. Returns None for projects that have no Hydro."""
+def hydro_required(project, building):
+    """True when this unit's tenant must sign the Hydro addendum.
+
+    `building` matters only where a project is split — project 24 has hydro
+    included at 7775 Trahan but not at 7725 — so it must be passed whenever
+    the project appears in HYDRO_INCLUDED_BUILDINGS.
+    """
     if project not in HYDRO_PROJECTS:
+        return False
+    included = HYDRO_INCLUDED_BUILDINGS.get(project)
+    if not included:
+        return True
+    if not building:
+        raise FormError(
+            f"project {project} is split on hydro — pass the building so the "
+            f"addendum is only produced where it is needed (included at: "
+            f"{', '.join(included)})")
+    return not any(b in str(building) for b in included)
+
+
+def fill_hydro(project, building, lease_number, address, tenant_name, date, out_dir):
+    """Fill the Hydro addendum. Returns None where hydro is included in rent."""
+    if not hydro_required(project, building):
         return None
     template = os.path.join(HYDRO_DIR, f"{project} - Hydro.pdf")
     if not os.path.exists(template):

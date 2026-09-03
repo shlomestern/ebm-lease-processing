@@ -30,10 +30,11 @@ Everything signs inside CORPIQ. Docusign and Adobe are not used.
 | Path | What it is |
 |---|---|
 | `forms/eft/` | 46 EFT forms — one per project, English and French |
-| `forms/hydro/` | 15 Hydro-Québec addenda — only these projects have one |
+| `forms/hydro/` | 13 Hydro-Québec addenda — only where hydro is not included |
 | `tools/companies.py` | project number -> company legal name |
 | `tools/rebuild.py` | regenerates every EFT form |
 | `tools/rebuild_hydro.py` | regenerates every Hydro addendum |
+| `tools/fill_forms.py` | fills both annexes for one lease |
 | `tools/gmail-lease-bridge.gs` | the Gmail Apps Script bridge |
 
 ## Forms
@@ -62,11 +63,17 @@ python3 -m venv .venv && .venv/bin/pip install pypdf reportlab pillow
 .venv/bin/python tools/rebuild.py     # writes eft-rebuilt/
 ```
 
-### Hydro (15 projects: 13, 14, 17, 22, 24, 28, 30, 31, 32, 33, 34, 38, 40, 42, 50)
+### Hydro (13 projects: 13, 14, 17, 24, 28, 30, 31, 32, 33, 38, 40, 42, 50)
 
 A bilingual addendum in which the tenant acknowledges that notifying
 Hydro-Québec is their own responsibility. Rebuilt by `tools/rebuild_hydro.py`
 to match the EFT styling, and generated empty.
+
+**Hydro is included in the rent** — so no addendum and no transfer — at
+projects 19, 22, 26, 34, 44, 46 and 48. Project **24 is split**: 7725 Trahan
+needs the form, 7775 Trahan does not, so `fill_forms.hydro_required()` needs
+the building and refuses to guess without it. Transferring responsibility on
+the Hydro-Québec site afterwards is done by hand; it is not automated.
 
 The supplied masters were reused between tenancies and still held the previous
 tenant's name, lease number and — on projects 34 and 38 — their signature
