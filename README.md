@@ -35,7 +35,13 @@ Everything signs inside CORPIQ. Docusign and Adobe are not used.
 | `tools/rebuild.py` | regenerates every EFT form |
 | `tools/rebuild_hydro.py` | regenerates every Hydro addendum |
 | `tools/fill_forms.py` | fills both annexes for one lease |
+| `tools/lookups.py` | rooms, approving admin, auto-deposit address |
 | `tools/gmail-lease-bridge.gs` | the Gmail Apps Script bridge |
+| `data/apartments.csv` | 1,857 units: project, address, unit, size, rooms |
+| `data/admins.csv` | project -> approving admin, email, cell |
+| `data/auto_deposit.csv` | project -> e-transfer address |
+| `data/buildium_units.csv` | Buildium export, for cross-checking |
+| `forms/building-rules/` | the PDFs uploaded in Section E |
 
 ## Forms
 
@@ -93,12 +99,32 @@ The French and English halves carry the same three values, so write each twice:
 Building addresses in each header come from the workbook, grouped by street.
 Regenerate with `.venv/bin/python tools/rebuild_hydro.py`.
 
+## Lookups
+
+These used to be spreadsheets in a Downloads folder, which an unattended cloud
+run cannot reach, so the data lives in `data/`. `tools/lookups.py` reads it:
+
+- `rooms_for(project, address, unit)` — rooms from the directory, falling back
+  to size + 0.5. Where a project has several buildings, the civic number in the
+  address picks the right one; without it the call raises rather than guessing.
+- `admin_for(project)` — who approves, and the cell for the SMS reminder.
+- `auto_deposit_for(project)` — the e-transfer address, never invented.
+- `building_rules(lang)` — the Section E PDF.
+
+The auto-deposit workbook's fourth column holds e-transfer security answers.
+**It is deliberately not in this repository** — `data/auto_deposit.csv` carries
+only project, display name and address.
+
 ## Known gaps
 
 - **Project 45 (Le 7040 Inc.)** is not in use. Its EFT exists for when it is.
 - The office address on the EFT header came from a newer version of the form
   than the masters used here. If any company uses a different address, change
   `OFFICE_ADDRESS` in `tools/rebuild.py`.
+- Project 45's admin has no email on file, so its leases cannot be sent for
+  verification.
+- Some directory rows have `?` for rooms and no size; those units raise and
+  need Buildium.
 - Project 26 is **Seigneurie Lasalle Inc.** (confirmed by Shlome); the projects
   workbook spells it "Seigneure".
 
