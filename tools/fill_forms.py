@@ -58,6 +58,32 @@ class FormError(Exception):
     """Raised when a form cannot be filled correctly. Never attach on this."""
 
 
+def eft_start_date(lease_start, first_month_paid_in_advance):
+    """When monthly withdrawals begin on the EFT.
+
+    Normally the lease start date. When the tenant pays the first month in
+    advance by e-transfer, withdrawals begin the month AFTER the lease starts,
+    so the first month is not taken twice.
+
+    lease_start is a date, or a string 'YYYY-MM-DD'.
+    """
+    import datetime
+    if isinstance(lease_start, str):
+        try:
+            lease_start = datetime.date.fromisoformat(lease_start.strip())
+        except ValueError:
+            raise FormError(
+                f"lease start {lease_start!r} is not YYYY-MM-DD — pass a date so the "
+                f"EFT start month is not guessed")
+    if not first_month_paid_in_advance:
+        return lease_start
+    year, month = lease_start.year, lease_start.month + 1
+    if month > 12:
+        year, month = year + 1, 1
+    day = min(lease_start.day, 28)      # every month has a 28th
+    return datetime.date(year, month, day)
+
+
 def _write(template, values, out_path):
     reader = PdfReader(template)
     fields = set(reader.get_fields() or {})
