@@ -21,6 +21,7 @@ email a void cheque instead.
 """
 import os
 from pypdf import PdfReader, PdfWriter
+from pypdf.generic import NameObject
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -92,20 +93,38 @@ def _write(template, values, out_path):
     if unknown:
         raise FormError(f"{os.path.basename(template)}: no such field(s): {sorted(unknown)}")
 
+    # flatten=True bakes each field's rendered value into the page's own
+    # content stream instead of relying on the widget's /V plus NeedAppearances.
+    # CORPIQ's own PDF preview (and, we must assume, whatever it uses to
+    # assemble the final signed packet) does not regenerate field appearances
+    # from NeedAppearances, so a merely-filled interactive form renders with
+    # every value blank there even though the value is really set. Flattening
+    # draws the text as ordinary page content, which any renderer shows.
     writer = PdfWriter(clone_from=template)
     for page in writer.pages:
-        writer.update_page_form_field_values(page, values)
-    writer.set_need_appearances_writer(True)
+        writer.update_page_form_field_values(page, values, flatten=True)
+
+    # The fields stay technically fillable after flatten=True (it only adds
+    # the appearance to the page, it doesn't remove the widget). Nothing in
+    # this workflow needs that interactivity afterward -- the tenant fills
+    # banking details by emailing a void cheque, not inside CORPIQ -- so drop
+    # the widgets and the AcroForm entirely to leave a plain, static PDF.
+    for page in writer.pages:
+        if "/Annots" in page:
+            del page[NameObject("/Annots")]
+    if "/AcroForm" in writer._root_object:
+        del writer._root_object[NameObject("/AcroForm")]
+
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "wb") as fh:
         writer.write(fh)
 
-    # Read back: every value must have landed, and nothing else may be set.
-    got = PdfReader(out_path).get_fields() or {}
-    for k, v in values.items():
-        actual = got.get(k, {}).get("/V")
-        if str(actual or "") != str(v):
-            raise FormError(f"{os.path.basename(out_path)}: {k!r} is {actual!r}, expected {v!r}")
+    # Read back: the PDF is flattened and has no form fields anymore, so
+    # verify by confirming each value was actually drawn into the page text.
+    out_text = "\n".join(p.extract_text() for p in PdfReader(out_path).pages)
+    missing = [v for v in values.values() if v and str(v) not in out_text]
+    if missing:
+        raise FormError(f"{os.path.basename(out_path)}: value(s) not found in flattened text: {missing}")
     return out_path
 
 
