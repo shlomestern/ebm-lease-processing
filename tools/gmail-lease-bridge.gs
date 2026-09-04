@@ -292,9 +292,18 @@ function classify_(info) {
   signals.phone = /(\+?1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/.test(body);
   signals.tenantName = /\b(tenant|name|locataire|nom)\s*[:\-]/.test(body);
   signals.rent = /\b(rent|loyer|monthly)\b[^\n]{0,40}\$?\s?\d{3,5}|\$\s?\d{1,2},?\d{3}(\.\d{2})?\s*(\/|per)?\s*(mo|month|mois)?/.test(body);
+  // Dates are written every which way: "oct 1st 2026", "October 1, 2026",
+  // "1st of October", "2026-10-01", "01/10/2026". The month-name form must
+  // allow an ordinal suffix ("1st", "2nd") — without that, "starting on oct
+  // 1st 2026" was missed and the request looked like ordinary mail.
+  var MONTH = "(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\\.?";
+  var DAY = "\\d{1,2}(?:st|nd|rd|th)?";
+  var LEAD = "\\b(start|starting|begin|move[\\s-]?in|lease\\s+start|commenc|d[ée]but|from|as\\s+of)\\b";
   signals.startDate =
-    /\b(start|move[\s-]?in|lease\s+start|commenc|d[ée]but|from)\b[^\n]{0,40}(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}|\d{4}-\d{2}-\d{2}|(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{1,2})/.test(body) ||
-    /\b(1st|first)\s+of\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/.test(body);
+    new RegExp(LEAD + "[^\\n]{0,40}(\\d{1,2}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{2,4}|\\d{4}-\\d{2}-\\d{2}|"
+               + MONTH + "\\s+" + DAY + "|" + DAY + "\\s+(?:of\\s+)?" + MONTH + ")", "i").test(body) ||
+    new RegExp("\\b" + DAY + "\\s+of\\s+" + MONTH, "i").test(body) ||
+    new RegExp(MONTH + "\\s+" + DAY + "[,\\s]+\\d{4}", "i").test(body);
 
   if (signals.subjectLeaseFor) return { isLease: true, reason: "subject", signals: signals };
   if (signals.singleKey)      return { isLease: true, reason: "singlekey", signals: signals };
